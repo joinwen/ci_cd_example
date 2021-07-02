@@ -1,0 +1,11 @@
+FROM node:14.15.1 AS builder
+WORKDIR /app
+COPY package* ./ \
+     .eslintrc.js ./
+RUN npm install
+COPY public ./public
+COPY src ./src
+RUN npm run build:prod
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
