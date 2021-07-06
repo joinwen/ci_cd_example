@@ -88,14 +88,23 @@ deploy_ssh_prod:
   only:
     variables:
       - $CI_COMMIT_TAG =~ /^release.*/
+  when: manual
   environment:
     name: $CI_PROD
     url: $SSH_SERVER:$CI_PROD_PORT
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
   script:
-    - ssh -p 22 root@${SSH_SERVER} <<EOF
-    - docker container rm $CONTAINER_PROD -f
-    - docker run -d -p $CI_PROD_PORT:80 --restart=always --name $CONTAINER_PROD $CONTAINER_PROD_IMAGE
-    - EOF
+    - >
+      ssh -o StrictHostKeyChecking=no root@${SSH_SERVER}
+      "
+      echo $CI_REGISTRY_PASSWORD | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin;
+      docker container rm $CONTAINER_PROD -f;
+      docker run -d -p $CI_PROD_PORT:80 --restart=always --name $CONTAINER_PROD $CONTAINER_PROD_IMAGE
+      "
 
 deploy_ssh_dev:
   stage: deploy
@@ -106,11 +115,20 @@ deploy_ssh_dev:
   only:
     variables:
       - $CI_COMMIT_TAG =~ /^dev.*/
+  when: manual
   environment:
     name: $CI_DEV
     url: $SSH_SERVER:$CI_DEV_PORT
+  before_script:
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
   script:
-    - ssh -p 22 root@${SSH_SERVER} <<EOF
-    - docker container rm $CONTAINER_DEV -f
-    - docker run -d -p $CI_DEV_PORT:80 --restart=always --name $CONTAINER_DEV $CONTAINER_DEV_IMAGE
-    - EOF
+    - >
+      ssh -o StrictHostKeyChecking=no root@${SSH_SERVER}
+      "
+      echo $CI_REGISTRY_PASSWORD | docker login $CI_REGISTRY --username $CI_REGISTRY_USER --password-stdin;
+      docker container rm $CONTAINER_DEV -f;
+      docker run -d -p $CI_DEV_PORT:80 --restart=always --name $CONTAINER_DEV $CONTAINER_DEV_IMAGE
+      "
